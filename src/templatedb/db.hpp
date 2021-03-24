@@ -10,34 +10,12 @@
 #include <vector>
 
 #include "templatedb/operation.hpp"
+#include "templatedb/lsm.hpp"
+
+#define BUFFER_SIZE 4096
 
 namespace templatedb
 {
-
-typedef enum _status_code
-{
-    OPEN = 0,
-    CLOSED = 1,
-    ERROR_OPEN = 100,
-} db_status;
-
-
-class Value
-{
-public:
-    std::vector<int> items;
-    bool visible = true;
-
-    Value() {}
-    Value(bool _visible) {visible = _visible;}
-    Value(std::vector<int> _items) { items = _items;}
-
-    bool operator ==(Value const & other) const
-    {
-        return (visible == other.visible) && (items == other.items);
-    }
-};
-
 
 class DB
 {
