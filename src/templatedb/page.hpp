@@ -74,7 +74,24 @@ namespace templatedb
         }
       }
 
+      void loadFromArray(bool isValid, int* array, int size){
+        if (isValid){
+          buffer[0] = 1;
+        } else{
+          buffer[0] = 0;
+        }
+
+        int* numP = (int*)(&buffer[TUPLE_KEY_OFFSET]);
+        for (int i = 0; i < size; ++i){
+          *numP++ = *array++;
+        }
+      }
+
       inline void writeToFile(std::fstream* file){
+        file->write(buffer, TUPLE_SIZE);
+      }
+
+      inline void writeToFile(std::ofstream* file){
         file->write(buffer, TUPLE_SIZE);
       }
   }; /* Tuple */
@@ -100,13 +117,11 @@ namespace templatedb
       inline void resetIndex(int idx);
 
 
-      inline int loadTuple(Tuple* tuple);
-
-
-      inline int loadTuple(Tuple* tuple, int idx);
+      int loadTuple(Tuple* tuple);
+      int loadTuple(Tuple* tuple, int idx);
   };
 
-  std::string mergeFiles(std::vector<LSMFile> files);
+  void mergeFiles(std::vector<LSMFile*> & files, const std::string & dir, std::string & newFileName);
 
 } // namespace templatedb
 
