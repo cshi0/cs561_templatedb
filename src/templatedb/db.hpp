@@ -31,7 +31,6 @@ public:
     std::vector<Value> scan(int min_key, int max_key);
     void del(int key);
     void del(int min_key, int max_key);
-    size_t size();
 
     db_status open(std::string & fname);
     bool close();
@@ -41,11 +40,10 @@ public:
     std::vector<Value> execute_op(Operation op);
 
 private:
-    std::fstream file;
+    LSM lsm;
     std::unordered_map<int, Value> table;
     size_t value_dimensions = 0;
     
-    bool write_to_file();
 };
 
 }   // namespace templatedb

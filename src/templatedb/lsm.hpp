@@ -28,6 +28,17 @@
 #endif
 
 namespace templatedb{
+  typedef std::pair<int, int> FileIdentifer;
+
+  struct pair_hash { // https://stackoverflow.com/questions/32685540/why-cant-i-compile-an-unordered-map-with-a-pair-as-key
+    template <class T1, class T2>
+    std::size_t operator () (const std::pair<T1,T2> &p) const {
+        auto h1 = std::hash<T1>{}(p.first);
+        auto h2 = std::hash<T2>{}(p.second);
+        return h1 ^= h2 + 0x9e3779b9 + (h1<<6) + (h1>>2); // the hash combine function used in boost
+    }
+  };
+
   typedef enum _status_code{
     OPEN = 0,
     CLOSED = 1,
@@ -42,23 +53,24 @@ namespace templatedb{
 
   class LSM{
     private:
-      const std::string DIR; // directory where the LSM tree resides
-      const lsm_mode MODE; // leveling or tiering
-      const int DIMENSION;
-      const int BUFFER_PAIR_LIMIT; // max number of the key-value pairs can be in the input buffer
+      std::string DIR; // directory where the LSM tree resides
+      lsm_mode MODE; // leveling or tiering
+      int DIMENSION;
+      int BUFFER_PAIR_LIMIT; // max number of the key-value pairs can be in the input buffer
 
-      std::unordered_map<std::pair<int, int>, std::fstream> files;
+      std::unordered_map<FileIdentifer, LSMFile*, pair_hash> files;
 
       std::map<int, Value> inputBuffer; // the input buffer is a red-black tree
 
-      int levels; // level 0 is the inputBuffer
-      std::unordered_map<std::pair<int, int>, FencePointers> fencePointers;
-      std::unordered_map<int, BF::BloomFilter> bloomfilters;
+      int levels = 0; // level 0 is the inputBuffer
+      std::unordered_map<FileIdentifer, FencePointers*, pair_hash> fencePointers;
+      std::unordered_map<FileIdentifer, BF::BloomFilter*, pair_hash> bloomfilters;
+      std::vector<int> numFileAtLevel = {0};
 
       inline int _LevelFileLimit(int level) {return std::pow(LSM_MERGE_RATIO, level);}
       inline std::string _getFileName(int level, int k) {return DIR + "/" + LSM_FILE_NAME_PREFIX + std::to_string(level) + "_" + std::to_string(k);}
 
-      std::fstream _openFile(int level, int k);
+      LSMFile* _getFile(int level, int k); // k start from 1
 
       Value _TieringGet(int key);
       void _TieringPut(int key, Value val);
@@ -73,9 +85,15 @@ namespace templatedb{
       void _LevelingPushLevel(int level);
     
     public:
+      LSM(){}
       ~LSM(){close();}
 
-      db_status open();
+      db_status open(std::string _dir, lsm_mode _mode, int _dimension){
+        DIR = _dir;
+        MODE = _mode;
+        DIMENSION = _dimension;
+        BUFFER_PAIR_LIMIT = PAGE_SIZE/((DIMENSION + 1)*sizeof(int));
+      }
       void close();
 
       Value get(int key);

@@ -23,13 +23,17 @@ namespace templatedb
     std::vector<std::pair<int, int>> minValues; // (tuple index, key)
     
     public:
-      int getOffset(int val){
+      std::pair<int, int> getOffset(int key){
         for (int i = 0; i < minValues.size(); ++i){
-          if (minValues[i].second > val){
-            return minValues[i-1].first;
+          if (minValues[i].second > key){
+            return std::pair<int,int>(minValues[i-1].first, minValues[i].first);
           }
-          return minValues.back().first;
+          return std::pair<int,int>(minValues.back().first, INT32_MAX);
         }
+      }
+
+      inline void add(int index, int key){
+        this->minValues.push_back(std::pair<int, int>(index, key));
       }
   }; /* FencePointers */
 
@@ -121,7 +125,7 @@ namespace templatedb
       int loadTuple(Tuple* tuple, int idx);
   };
 
-  void mergeFiles(std::vector<LSMFile*> & files, const std::string & dir, std::string & newFileName);
+  void mergeFiles(std::vector<LSMFile*> & files, const std::string & dir, std::string & newFileName, FencePointers* fp, BF::BloomFilter* bf);
 
 } // namespace templatedb
 
