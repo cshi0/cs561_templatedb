@@ -32,7 +32,7 @@ public:
     void del(int key);
     void del(int min_key, int max_key);
 
-    db_status open(std::string & fname);
+    db_status open(std::string & dir, lsm_mode mode);
     bool close();
 
     bool load_data_file(std::string & fname);
@@ -40,8 +40,9 @@ public:
     std::vector<Value> execute_op(Operation op);
 
 private:
-    LSM lsm;
-    std::unordered_map<int, Value> table;
+    LSM* lsm;
+    std::string dir;
+    lsm_mode mode;
     size_t value_dimensions = 0;
     
 };

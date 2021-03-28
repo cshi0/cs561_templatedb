@@ -85,21 +85,55 @@ namespace templatedb{
       void _LevelingPushLevel(int level);
     
     public:
-      LSM(){}
+      LSM(std::string _dir, lsm_mode _mode, int _dimension) : DIR(_dir), MODE(_mode), DIMENSION(_dimension), BUFFER_PAIR_LIMIT(PAGE_SIZE/((DIMENSION + 1)*sizeof(int))){}
       ~LSM(){close();}
 
-      db_status open(std::string _dir, lsm_mode _mode, int _dimension){
-        DIR = _dir;
-        MODE = _mode;
-        DIMENSION = _dimension;
-        BUFFER_PAIR_LIMIT = PAGE_SIZE/((DIMENSION + 1)*sizeof(int));
-      }
-      void close();
+      void close(){
+        for (auto i : files){
+          delete i.second;
+        }
 
-      Value get(int key);
-      void put(int key, Value val);
-      std::vector<Value> scan();
-      std::vector<Value> scan(int min_key, int max_key);
+        for (auto i : fencePointers){
+          delete i.second;
+        }
+
+        for (auto i : bloomfilters){
+          delete i.second;
+        }
+      }
+
+      Value get(int key){
+        switch (MODE){
+          case TIERING:
+          return _TieringGet(key);
+          case LEVELING:
+          return _LevelingGet(key);
+        }
+      }
+      void put(int key, Value val){
+        switch (MODE){
+          case TIERING:
+          return _TieringPut(key, val);
+          case LEVELING:
+          return _LevelingPut(key, val);
+        }
+      }
+      std::vector<Value> scan(){
+        switch (MODE){
+          case TIERING:
+          return _TieringScan();
+          case LEVELING:
+          return _LevelingScan();
+        }
+      }
+      std::vector<Value> scan(int min_key, int max_key){
+        switch (MODE){
+          case TIERING:
+          return _TieringScan(min_key, max_key);
+          case LEVELING:
+          return _LevelingScan(min_key, max_key);
+        }
+      }
   }; /* LSM */
 
 } /* templatedb */

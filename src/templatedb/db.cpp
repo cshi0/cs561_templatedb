@@ -5,67 +5,40 @@ using namespace templatedb;
 
 Value DB::get(int key)
 {
-    if (table.count(key))
-        return table[key];
-    
-    return Value(false);
+    return lsm->get(key);
 }
 
 
 void DB::put(int key, Value val)
 {
-    table[key] = val;
+    lsm->put(key, val);
 }
 
 
 std::vector<Value> DB::scan()
 {
-    std::vector<Value> return_vector;
-    for (auto pair: table)
-    {
-        return_vector.push_back(pair.second);
-    }
-
-    return return_vector;
+    return lsm->scan();
 }
 
 
 std::vector<Value> DB::scan(int min_key, int max_key)
 {
-    std::vector<Value> return_vector;
-    for (auto pair: table)
-    {
-        if ((pair.first >= min_key) && (pair.first <= max_key))
-            return_vector.push_back(pair.second);
-    }
-
-    return return_vector;
+    return lsm->scan(min_key, max_key);
 }
 
 
 void DB::del(int key)
 {
-    table.erase(key);
+    lsm->put(key, Value(false));
 }
 
 
 void DB::del(int min_key, int max_key)
 {
-    for (auto it = table.begin(); it != table.end(); ) {
-        if ((it->first >= min_key) && (it->first <= max_key)){
-            table.erase(it++);
-        } else { 
-            ++it;
-        }
+    for (int i = min_key; i <= max_key; ++i){
+        lsm->put(i, Value(false));
     }
 }
-
-
-size_t DB::size()
-{
-    return table.size();
-}
-
 
 std::vector<Value> DB::execute_op(Operation op)
 {
@@ -97,115 +70,63 @@ std::vector<Value> DB::execute_op(Operation op)
 
 bool DB::load_data_file(std::string & fname)
 {
-    std::ifstream fid(fname);
+    std::fstream fid(fname);
+
+    int key;
+    int line_num = 0;
+    std::string line;
     if (fid.is_open())
     {
-        int key;
-        int line_num = 0;
-        std::string line;
         std::getline(fid, line); // First line is rows, col
-        while (std::getline(fid, line))
-        {
-            line_num++;
-            std::stringstream linestream(line);
-            std::string item;
-
-            std::getline(linestream, item, ' ');
-            std::string op_code = item;
-
-            std::getline(linestream, item, ' ');
-            key = stoi(item);
-            std::vector<int> items;
-            while(std::getline(linestream, item, ' '))
-            {
-                items.push_back(stoi(item));
-            }
-            this->put(key, Value(items));
-        }
-    }
-    else
-    {
+    } else{
         fprintf(stderr, "Unable to read %s\n", fname.c_str());
         return false;
+    }
+
+    if (lsm == nullptr){
+        std::stringstream linestream(line);
+        std::string item;
+
+        std::getline(linestream, item, ' '); // row
+        std::getline(linestream, item, ' '); // dimension
+        this->value_dimensions = stoi(item);
+
+        this->lsm = new LSM(this->dir, this->mode, this->value_dimensions);
+    }
+
+    while (std::getline(fid, line)){
+        line_num++;
+        std::stringstream linestream(line);
+        std::string item;
+
+        std::getline(linestream, item, ' ');
+        std::string op_code = item;
+
+        std::getline(linestream, item, ' ');
+        key = stoi(item);
+        std::vector<int> items;
+        while(std::getline(linestream, item, ' '))
+        {
+            items.push_back(stoi(item));
+        }
+        this->put(key, Value(items));
     }
 
     return true;
 }
 
 
-db_status DB::open(std::string & fname)
+db_status DB::open(std::string & dir, lsm_mode mode)
 {
-    this->file.open(fname, std::ios::in | std::ios::out);
-    if (file.is_open())
-    {
-        this->status = OPEN;
-        // New file implies empty file
-        if (file.peek() == std::ifstream::traits_type::eof())
-            return this->status;
-
-        int key;
-        std::string line;
-        std::getline(file, line); // First line is rows, col
-        while (std::getline(file, line))
-        {
-            std::stringstream linestream(line);
-            std::string item;
-
-            std::getline(linestream, item, ',');
-            key = stoi(item);
-            std::vector<int> items;
-            while(std::getline(linestream, item, ','))
-            {
-                items.push_back(stoi(item));
-            }
-            this->put(key, Value(items));
-            if (value_dimensions == 0)
-                value_dimensions = items.size();
-        }
-    }
-    else if (!file) // File does not exist
-    {
-        this->file.open(fname, std::ios::out);
-        this->status = OPEN;
-    }
-    else
-    {
-        file.close();
-        this->status = ERROR_OPEN;
-    }
-
-    return this->status; 
+    this->dir = dir;
+    this->mode = mode;
+    return OPEN;
 }
 
 
 bool DB::close()
 {
-    if (file.is_open())
-    {
-        this->write_to_file();
-        file.close();
+    if (lsm != nullptr){
+        delete lsm;
     }
-    this->status = CLOSED;
-
-    return true;
-}
-
-
-bool DB::write_to_file()
-{
-    file.clear();
-    file.seekg(0, std::ios::beg);
-
-    std::string header = std::to_string(table.size()) + ',' + std::to_string(value_dimensions) + '\n';
-    file << header;
-    for(auto item: table)
-    {
-        std::ostringstream line;
-        std::copy(item.second.items.begin(), item.second.items.end() - 1, std::ostream_iterator<int>(line, ","));
-        line << item.second.items.back();
-        std::string value(line.str());
-        file << item.first << ',' << value << '\n';
-    }
-
-    return true;
 }
