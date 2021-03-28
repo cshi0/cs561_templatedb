@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "templatedb/db.hpp"
 
@@ -8,30 +9,46 @@ using namespace templatedb;
 
 Value DB::get(int key)
 {
+    if (this->lsm == nullptr){
+        return Value(false);
+    }
     return lsm->get(key);
 }
 
 
 void DB::put(int key, Value val)
 {
+    if (this->lsm == nullptr){
+        value_dimensions = val.items.size();
+        this->lsm = new LSM(dir, mode, value_dimensions);
+    }
     lsm->put(key, val);
 }
 
 
 std::vector<Value> DB::scan()
 {
+    if (this->lsm == nullptr){
+        return std::vector<Value>();
+    }
     return lsm->scan();
 }
 
 
 std::vector<Value> DB::scan(int min_key, int max_key)
 {
+    if (this->lsm == nullptr){
+        return std::vector<Value>();
+    }
     return lsm->scan(min_key, max_key);
 }
 
 
 void DB::del(int key)
 {
+    if (this->lsm == nullptr){
+        return;
+    }
     lsm->put(key, Value(false));
 }
 
@@ -123,13 +140,10 @@ db_status DB::open(std::string & dir, lsm_mode mode)
 {
     struct stat info;
 
-    if( stat( dir.c_str(), &info ) != 0 ){ 
-        printf( "cannot access %s\n", dir.c_str() );
-        return ERROR_OPEN;
-    }
-    else if( (info.st_mode & S_IFDIR) == 0 ){
+    if( !(stat(dir.c_str(), &info) == 0 && S_ISDIR(info.st_mode)) ){
         if (mkdir(dir.c_str(), 0777) != 0){
             printf( "cannot create %s\n", dir.c_str() );
+            printf("%d", errno);
             return ERROR_OPEN;
         }
     }

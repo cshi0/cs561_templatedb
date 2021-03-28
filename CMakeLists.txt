@@ -7,6 +7,8 @@ set(templatedb_lib
     src/templatedb/operation.cpp
     src/templatedb/page.cpp
     src/templatedb/lsm.cpp
+    src/BloomFilter/BloomFilter.cpp
+    src/BloomFilter/murmurhash.cpp
 )
 
 set(bloomfilter_lib
@@ -40,7 +42,7 @@ add_subdirectory("${CMAKE_BINARY_DIR}/external/googletest-src"
                  "${CMAKE_BINARY_DIR}/external/googletest-build"
 )
 
-enable_testing()
+#enable_testing()
 
 add_subdirectory(examples)
 add_subdirectory(tests)
