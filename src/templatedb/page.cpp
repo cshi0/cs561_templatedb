@@ -2,12 +2,11 @@
 #include <sys/stat.h>
 #include <bits/stdc++.h>
 
-#include "page.hpp"
-#include "BloomFilter/BloomFilter.h"
+#include "templatedb/page.hpp"
 
 using namespace templatedb;
 
-LSMFile::LSMFile(unsigned _level, unsigned _k, std::string & _name){
+LSMFile::LSMFile(unsigned _level, unsigned _k, const std::string & _name){
   this->currIdx = 0;
   this->k = _k;
   this->level = _level;

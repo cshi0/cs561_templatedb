@@ -5,6 +5,8 @@
 #include<iterator>
 #include<vector>
 
+#include "BloomFilter/BloomFilter.h"
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -113,7 +115,7 @@ namespace templatedb
       std::string name;
       std::fstream file;
 
-      LSMFile(unsigned _level, unsigned _k, std::string & _name);
+      LSMFile(unsigned _level, unsigned _k, const std::string & _name);
       ~LSMFile(){file.close();}
 
 

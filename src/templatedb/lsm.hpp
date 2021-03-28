@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "BloomFilter/BloomFilter.h"
 #include "templatedb/page.hpp"
 
 #ifndef PAGE_SIZE
@@ -102,38 +101,10 @@ namespace templatedb{
         }
       }
 
-      Value get(int key){
-        switch (MODE){
-          case TIERING:
-          return _TieringGet(key);
-          case LEVELING:
-          return _LevelingGet(key);
-        }
-      }
-      void put(int key, Value val){
-        switch (MODE){
-          case TIERING:
-          return _TieringPut(key, val);
-          case LEVELING:
-          return _LevelingPut(key, val);
-        }
-      }
-      std::vector<Value> scan(){
-        switch (MODE){
-          case TIERING:
-          return _TieringScan();
-          case LEVELING:
-          return _LevelingScan();
-        }
-      }
-      std::vector<Value> scan(int min_key, int max_key){
-        switch (MODE){
-          case TIERING:
-          return _TieringScan(min_key, max_key);
-          case LEVELING:
-          return _LevelingScan(min_key, max_key);
-        }
-      }
+      Value get(int key);
+      void put(int key, Value val);
+      std::vector<Value> scan();
+      std::vector<Value> scan(int min_key, int max_key);
   }; /* LSM */
 
 } /* templatedb */

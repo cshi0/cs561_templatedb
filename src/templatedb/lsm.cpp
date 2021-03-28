@@ -347,7 +347,8 @@ void LSM::_LevelingPushLevel(int level){
       FileIdentifer nextLevelFile = {level + 1, 1};
       std::vector<LSMFile*> files;
       files.push_back(this->_getFile(level + 1, 1));
-      files.push_back(&LSMFile(0,0, tempFileName));
+      LSMFile bufferFile(0,0, tempFileName);
+      files.push_back(&bufferFile);
       
       std::string newFileName;
       BF::BloomFilter* newBF = new BF::BloomFilter();
@@ -424,5 +425,38 @@ void LSM::_LevelingPushLevel(int level){
       delete file;
     }
     std::rename(newFileName.c_str(), this->_getFileName(level + 1, 1).c_str());
+  }
+}
+
+Value LSM::get(int key){
+  switch (MODE){
+    case TIERING:
+    return this->_TieringGet(key);
+    case LEVELING:
+    return this->_LevelingGet(key);
+  }
+}
+void LSM::put(int key, Value val){
+  switch (MODE){
+    case TIERING:
+    return this->_TieringPut(key, val);
+    case LEVELING:
+    return this->_LevelingPut(key, val);
+  }
+}
+std::vector<Value> LSM::scan(){
+  switch (MODE){
+    case TIERING:
+    return this->_TieringScan();
+    case LEVELING:
+    return this->_LevelingScan();
+  }
+}
+std::vector<Value> LSM::scan(int min_key, int max_key){
+  switch (MODE){
+    case TIERING:
+    return this->_TieringScan(min_key, max_key);
+    case LEVELING:
+    return this->_LevelingScan(min_key, max_key);
   }
 }

@@ -40,7 +40,7 @@ public:
     std::vector<Value> execute_op(Operation op);
 
 private:
-    LSM* lsm;
+    LSM* lsm = nullptr;
     std::string dir;
     lsm_mode mode;
     size_t value_dimensions = 0;

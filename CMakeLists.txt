@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(templatedb_lib
     src/templatedb/db.cpp
     src/templatedb/operation.cpp
+    src/templatedb/page.cpp
+    src/templatedb/lsm.cpp
 )
 
 set(bloomfilter_lib

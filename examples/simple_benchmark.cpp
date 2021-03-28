@@ -3,7 +3,6 @@
 
 #include "clipp.h"
 #include "templatedb/db.hpp"
-#include "templatedb/operation.hpp"
 
 typedef struct _configuration
 {
@@ -41,7 +40,7 @@ int main(int argc, char * argv[])
     config cfg = cmdline_settings(argc, argv);
 
     templatedb::DB db;
-    if (db.open(cfg.dbname) != templatedb::OPEN)
+    if (db.open(cfg.dbname, templatedb::LEVELING) != templatedb::OPEN)
     {
         fprintf(stderr, "Unable to load DB %s\n", cfg.dbname.c_str());
         exit(EXIT_FAILURE);
