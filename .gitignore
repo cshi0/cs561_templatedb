@@ -33,6 +33,7 @@
 
 # Data
 build
+debug
 
 # Workspace settings
 .vscode
