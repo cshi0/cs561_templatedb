@@ -27,7 +27,7 @@
 #endif
 
 namespace templatedb{
-  typedef std::pair<int, int> FileIdentifer;
+  typedef std::pair<int, int> FileIdentifier;
 
   struct pair_hash { // https://stackoverflow.com/questions/32685540/why-cant-i-compile-an-unordered-map-with-a-pair-as-key
     template <class T1, class T2>
@@ -54,16 +54,14 @@ namespace templatedb{
     private:
       std::string DIR; // directory where the LSM tree resides
       lsm_mode MODE; // leveling or tiering
-      int DIMENSION;
-      int BUFFER_PAIR_LIMIT; // max number of the key-value pairs can be in the input buffer
 
-      std::unordered_map<FileIdentifer, LSMFile*, pair_hash> files;
+      std::unordered_map<FileIdentifier, LSMFile*, pair_hash> files;
 
-      std::map<int, Value> inputBuffer; // the input buffer is a red-black tree
+      InputBuffer inputBuffer; // the input buffer is a red-black tree
 
       int levels = 0; // level 0 is the inputBuffer
-      std::unordered_map<FileIdentifer, FencePointers*, pair_hash> fencePointers;
-      std::unordered_map<FileIdentifer, BF::BloomFilter*, pair_hash> bloomfilters;
+      std::unordered_map<FileIdentifier, FencePointers*, pair_hash> fencePointers;
+      std::unordered_map<FileIdentifier, BF::BloomFilter*, pair_hash> bloomfilters;
       std::vector<int> numFileAtLevel = {0};
 
       inline int _LevelFileLimit(int level) {return std::pow(LSM_MERGE_RATIO, level);}
@@ -84,7 +82,7 @@ namespace templatedb{
       void _LevelingPushLevel(int level);
     
     public:
-      LSM(std::string _dir, lsm_mode _mode, int _dimension) : DIR(_dir), MODE(_mode), DIMENSION(_dimension), BUFFER_PAIR_LIMIT(PAGE_SIZE/((DIMENSION + 1)*sizeof(int))){}
+      LSM(std::string _dir, lsm_mode _mode) : DIR(_dir), MODE(_mode){}
       ~LSM(){close();}
 
       void close(){

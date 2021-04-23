@@ -1,13 +1,12 @@
 #include <iostream>
+#include <queue>
 #include <sys/stat.h>
-#include <bits/stdc++.h>
 
 #include "templatedb/page.hpp"
 
 using namespace templatedb;
 
 LSMFile::LSMFile(unsigned _level, unsigned _k, const std::string & _name){
-  this->currIdx = 0;
   this->k = _k;
   this->level = _level;
   this->name = _name;
@@ -25,8 +24,6 @@ LSMFile::LSMFile(unsigned _level, unsigned _k, const std::string & _name){
     if (this->file.gcount() == LSM_PAGE_HEADER_SIZE){
       int* p = (int*)header;
       this->tupleNum = p[0];
-      this->dimension = p[1];
-      this->tupleSize = TUPLE_VALID_BYTE_SIZE + TUPLE_KEY_SIZE + (this->dimension * sizeof(int));
     } else{
       std::cerr << "cannot read header file: " << _name << std::endl;
     }
@@ -34,9 +31,9 @@ LSMFile::LSMFile(unsigned _level, unsigned _k, const std::string & _name){
 }
 
 
-inline void LSMFile::resetIndex(int idx){
-  this->file.seekg(LSM_PAGE_HEADER_SIZE + idx * this->tupleSize);
-  this->file.seekp(LSM_PAGE_HEADER_SIZE + idx * this->tupleSize);
+inline void LSMFile::resetIndex(streampos idx){
+  this->file.seekg(idx);
+  this->file.seekp(idx);
 }
 
 int LSMFile::loadTuple(Tuple* tuple){
@@ -44,7 +41,7 @@ int LSMFile::loadTuple(Tuple* tuple){
   return this->file.gcount();
 }
 
-int LSMFile::loadTuple(Tuple* tuple, int idx){
+int LSMFile::loadTuple(Tuple* tuple, streampos idx){
   this->resetIndex(idx);
   this->loadTuple(tuple);
   return this->file.gcount();
@@ -57,14 +54,13 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
   // initializations
   std::string hashName = "";
   int count = 0;
-  int dimension = files[0]->dimension;
   for (int i = 0; i < files.size(); ++i){
     if (!files[i]->good()) newFileName = "error";
 
     indexes[i] = 0;
     files[i]->resetIndex(0);
 
-    tuples[i] = new Tuple(files[i]->dimension);
+    tuples[i] = new Tuple();
     files[i]->loadTuple(tuples[i]);
     ++indexes[i];
 
@@ -76,10 +72,8 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
   std::ofstream tempFile(dir + "/" + tempFileName);
 
   // write header to the tempFile
-  int header[2] = {count, dimension};
+  int header[1] = {count};
   tempFile.write((char*)header, 2*sizeof(int));
-  
-  int fencePointerGranularity = PAGE_SIZE/tuples[0]->TUPLE_SIZE;
 
   // start writing to the new file
   std::priority_queue <std::pair<int, int>> keyMinHeap; // std::priority_queue is max heap, so the keys are negated to get a min heap
@@ -100,20 +94,20 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
 
     if (prevFileIdx == -1 || -minKey.first != prevKey){
       prevWritePos = tempFile.tellp();
-      tempFile.write(tuples[idx]->buffer, tuples[idx]->TUPLE_SIZE);
+      tempFile.write(tuples[idx]->buffer, tuples[idx]->getActualSize());
 
       //fence pointers and bloom filter only updated if a new key is inserted
-      if (count%fencePointerGranularity == 0) {fp->add(count, tuples[idx]->getKey());} // update fencepointers
+      if (count%FENCEPOINTER_GRANULARITY == 0) {fp->add(count, tuples[idx]->getKey());} // update fencepointers
       bf->program(std::to_string(tuples[idx]->getKey())); // update bloom filter
 
       ++count;
       prevKey = tuples[idx]->getKey();
       prevFileIdx = idx;
     } else if (-minKey.first == prevKey){ // elimimate tuples with the same value
-      if (files[idx]->level < files[prevFileIdx]->level || (files[idx]->level == files[prevFileIdx]->level && files[idx]->k > files[prevFileIdx]->k)){
+      if (files[idx]->level < files[prevFileIdx]->level || (files[idx]->level == files[prevFileIdx]->level && files[idx]->k > files[prevFileIdx]->k)){ // if newer
         tempFile.seekp(prevWritePos);
         prevWritePos = tempFile.tellp();
-        tempFile.write(tuples[idx]->buffer, tuples[idx]->TUPLE_SIZE); // rewrite previous tuple, so count does not change here
+        tempFile.write(tuples[idx]->buffer, tuples[idx]->getActualSize()); // rewrite previous tuple, so count does not change here
         prevKey = tuples[idx]->getKey();
         prevFileIdx = idx;
       }

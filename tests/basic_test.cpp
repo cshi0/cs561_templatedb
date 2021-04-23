@@ -20,10 +20,20 @@ protected:
 
     void SetUp() override 
     {
+        std::string fname = "test_db"; 
+        db0.open(fname, templatedb::LEVELING);
+        db1.open(fname, templatedb::LEVELING);
+        db2.open(fname, templatedb::LEVELING);
         db1.put(2, v1);
         db1.put(5, v2);
         db2.put(1024, v3);
     }
+
+    // void TearDown() override{
+    //     db0.close();
+    //     db1.close();
+    //     db2.close();
+    // }
 };
 
 
@@ -35,6 +45,8 @@ protected:
 
 TEST_F(DBTest, GetFunctionality)
 {
+    std::string data = "/mnt/d/files/BU/CS 561/projects/LSM/cs561_templatedb/data/test_500_4.data";
+    db1.load_data_file(data);
     templatedb::Value val = db1.get(2);
     EXPECT_EQ(DBTest::v1, val);
 }

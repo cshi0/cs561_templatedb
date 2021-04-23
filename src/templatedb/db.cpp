@@ -19,8 +19,7 @@ Value DB::get(int key)
 void DB::put(int key, Value val)
 {
     if (this->lsm == nullptr){
-        value_dimensions = val.items.size();
-        this->lsm = new LSM(dir, mode, value_dimensions);
+        return;
     }
     lsm->put(key, val);
 }
@@ -111,7 +110,7 @@ bool DB::load_data_file(std::string & fname)
         std::getline(linestream, item, ' '); // dimension
         this->value_dimensions = stoi(item);
 
-        this->lsm = new LSM(this->dir, this->mode, this->value_dimensions);
+        this->lsm = new LSM(this->dir, this->mode);
     }
 
     while (std::getline(fid, line)){
@@ -138,6 +137,10 @@ bool DB::load_data_file(std::string & fname)
 
 db_status DB::open(std::string & dir, lsm_mode mode)
 {
+    if (this->lsm != nullptr){
+        return OPEN;
+    }
+
     struct stat info;
 
     if( !(stat(dir.c_str(), &info) == 0 && S_ISDIR(info.st_mode)) ){
@@ -147,6 +150,7 @@ db_status DB::open(std::string & dir, lsm_mode mode)
             return ERROR_OPEN;
         }
     }
+    this->lsm = new LSM(dir, mode);
     this->dir = dir;
     this->mode = mode;
     return OPEN;
