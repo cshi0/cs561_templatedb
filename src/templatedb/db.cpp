@@ -244,6 +244,9 @@ void DB::_writeFencePointers(){
         fencePointers.seekp(0);
         auto FPIter = this->lsm->fencePointers.cbegin();
         while (FPIter != this->lsm->fencePointers.cend()){
+            if (FPIter->first.first == 0){
+                continue;
+            }
             //FileIdentifier
             fencePointers.write((char*)&(FPIter->first.first), sizeof(int));
             fencePointers.write((char*)&(FPIter->first.second), sizeof(int));
@@ -295,6 +298,9 @@ void DB::_writeBloomFilters(){
         bloomFilters.seekp(0);
         auto BFIter = this->lsm->bloomfilters.cbegin();
         while (BFIter != this->lsm->bloomfilters.cend()){
+            if (BFIter->first.first == 0){
+                continue;
+            }
             //FileIdentifier
             bloomFilters.write((char*)&(BFIter->first.first), sizeof(int));
             bloomFilters.write((char*)&(BFIter->first.second), sizeof(int));
