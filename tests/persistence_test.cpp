@@ -19,7 +19,6 @@ TEST(PersistenceTest, BasicOpenClose)
     db.open(fname, templatedb::LEVELING);
     templatedb::Value v2 = db.get(5);
     db.close();
-    remove(fname.c_str());
     ASSERT_EQ(v1, v2);
 }
 

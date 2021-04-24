@@ -158,9 +158,10 @@ db_status DB::open(std::string & dir, lsm_mode mode)
 
 bool DB::close()
 {
-    this->persist();
     if (lsm != nullptr){
+        this->persist();
         delete lsm;
+        this->lsm = nullptr;
     }
 }
 
@@ -184,7 +185,7 @@ void DB::_writeInfo(){
         infoFile.seekp(0);
         infoFile << std::to_string(mode) << std::endl;
         infoFile << std::to_string(this->lsm->levels) << std::endl;
-        auto iter = this->lsm->numFileAtLevel.cbegin();
+        auto iter = this->lsm->numFileAtLevel.cbegin() + 1;
         while (iter != this->lsm->numFileAtLevel.cend()){
             infoFile << std::to_string(*iter) << std::endl;
             ++iter;
@@ -209,6 +210,7 @@ void DB::_readInfo(){
         while(infoFile.good()){
             std::string numFile;
             infoFile >> numFile;
+            if (numFile == ""){ break; }
             this->lsm->numFileAtLevel.push_back(stoi(numFile));
         }
     } else{
@@ -245,6 +247,7 @@ void DB::_writeFencePointers(){
         auto FPIter = this->lsm->fencePointers.cbegin();
         while (FPIter != this->lsm->fencePointers.cend()){
             if (FPIter->first.first == 0){
+                ++FPIter;
                 continue;
             }
             //FileIdentifier
@@ -299,6 +302,7 @@ void DB::_writeBloomFilters(){
         auto BFIter = this->lsm->bloomfilters.cbegin();
         while (BFIter != this->lsm->bloomfilters.cend()){
             if (BFIter->first.first == 0){
+                ++BFIter;
                 continue;
             }
             //FileIdentifier
@@ -315,7 +319,8 @@ void DB::_writeBloomFilters(){
             std::vector<char> buffer(bf->bf_vec.size()/8);
             int count = 0;
             char byte = 0;
-            for (auto bit : bf->bf_vec){
+            for (int i = 0; i < bf->bf_vec.size(); ++i){
+                bool bit = bf->bf_vec[i];
                 byte |= (bit ? 1 : 0);
                 byte <<= 1; 
                 ++count;
