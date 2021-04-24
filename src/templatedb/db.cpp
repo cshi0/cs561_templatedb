@@ -108,7 +108,6 @@ bool DB::load_data_file(std::string & fname)
 
         std::getline(linestream, item, ' '); // row
         std::getline(linestream, item, ' '); // dimension
-        this->value_dimensions = stoi(item);
 
         this->lsm = new LSM(this->dir, this->mode);
     }

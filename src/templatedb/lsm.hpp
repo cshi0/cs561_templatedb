@@ -69,6 +69,9 @@ namespace templatedb{
 
       LSMFile* _getFile(int level, int k); // k start from 1
 
+      void _levelingMerge(int level, std::vector<LSMFile*> files);
+      std::string writeBufferFile();
+
       Value _TieringGet(int key);
       void _TieringPut(int key, Value val);
       std::vector<Value> _TieringScan();

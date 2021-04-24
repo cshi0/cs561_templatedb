@@ -37,14 +37,12 @@ inline void LSMFile::resetIndex(streampos idx){
 }
 
 int LSMFile::loadTuple(Tuple* tuple){
-  this->file.read(tuple->buffer, tuple->TUPLE_SIZE);
-  return this->file.gcount();
+  return tuple->readFromFile(this->file);
 }
 
 int LSMFile::loadTuple(Tuple* tuple, streampos idx){
   this->resetIndex(idx);
-  this->loadTuple(tuple);
-  return this->file.gcount();
+  return tuple->readFromFile(this->file);
 }
 
 void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & dir, std::string & newFileName, FencePointers* fp, BF::BloomFilter* bf){
@@ -60,6 +58,9 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
     indexes[i] = 0;
     files[i]->resetIndex(0);
 
+    char header[LSM_PAGE_HEADER_SIZE];
+    files[i]->file.read(header, LSM_PAGE_HEADER_SIZE);
+
     tuples[i] = new Tuple();
     files[i]->loadTuple(tuples[i]);
     ++indexes[i];
@@ -73,7 +74,7 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
 
   // write header to the tempFile
   int header[1] = {count};
-  tempFile.write((char*)header, 2*sizeof(int));
+  tempFile.write((char*)header, sizeof(int));
 
   // start writing to the new file
   std::priority_queue <std::pair<int, int>> keyMinHeap; // std::priority_queue is max heap, so the keys are negated to get a min heap
@@ -94,10 +95,10 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
 
     if (prevFileIdx == -1 || -minKey.first != prevKey){
       prevWritePos = tempFile.tellp();
-      tempFile.write(tuples[idx]->buffer, tuples[idx]->getActualSize());
+      tuples[idx]->writeToFile(&tempFile);
 
       //fence pointers and bloom filter only updated if a new key is inserted
-      if (count%FENCEPOINTER_GRANULARITY == 0) {fp->add(count, tuples[idx]->getKey());} // update fencepointers
+      if (count%FENCEPOINTER_GRANULARITY == 0) {fp->add(prevWritePos, tuples[idx]->getKey());} // update fencepointers
       bf->program(std::to_string(tuples[idx]->getKey())); // update bloom filter
 
       ++count;
@@ -107,7 +108,7 @@ void templatedb::mergeFiles(std::vector<LSMFile*> & files, const std::string & d
       if (files[idx]->level < files[prevFileIdx]->level || (files[idx]->level == files[prevFileIdx]->level && files[idx]->k > files[prevFileIdx]->k)){ // if newer
         tempFile.seekp(prevWritePos);
         prevWritePos = tempFile.tellp();
-        tempFile.write(tuples[idx]->buffer, tuples[idx]->getActualSize()); // rewrite previous tuple, so count does not change here
+        tuples[idx]->writeToFile(&tempFile); // rewrite previous tuple, so count does not change here
         prevKey = tuples[idx]->getKey();
         prevFileIdx = idx;
       }

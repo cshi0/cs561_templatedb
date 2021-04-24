@@ -43,7 +43,6 @@ private:
     LSM* lsm = nullptr;
     std::string dir;
     lsm_mode mode;
-    size_t value_dimensions = 0;
     
 };
 

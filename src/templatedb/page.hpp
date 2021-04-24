@@ -5,6 +5,8 @@
 #include<iterator>
 #include<vector>
 #include<map>
+#include <stdio.h>
+#include <cstring>
 
 #include "BloomFilter/BloomFilter.h"
 
@@ -36,12 +38,15 @@ namespace templatedb
     
     public:
       std::pair<streampos, streampos> getOffset(int key){
+        if (minValues[0].second > key){
+          return std::pair<streampos, streampos>(streampos(-1), streampos(-1));
+        }
         for (int i = 0; i < minValues.size(); ++i){
           if (minValues[i].second > key){
             return std::pair<streampos,streampos>(minValues[i-1].first, minValues[i].first);
           }
-          return std::pair<streampos,streampos>(minValues.back().first, INT32_MAX);
         }
+        return std::pair<streampos,streampos>(minValues.back().first, streampos(-1));
       }
 
       inline void add(streampos index, int key){
@@ -53,10 +58,11 @@ namespace templatedb
   public:
     std::vector<int> items;
     bool visible = true;
+    bool valid = false;
 
-    Value() {}
-    Value(bool _visible) {visible = _visible;}
-    Value(std::vector<int> _items) { items = _items;}
+    Value() {valid = false;}
+    Value(bool _visible) {visible = _visible; valid = true;}
+    Value(std::vector<int> _items) { items = _items; valid = true;}
 
     inline size_t getTupleSize(){
       return items.size() * sizeof(int) + TUPLE_KEY_SIZE + TUPLE_VALID_BYTE_SIZE;
@@ -83,11 +89,7 @@ namespace templatedb
     }
 
     inline Value find(int key){
-      auto bufferElem = this->inputBuffer.find(key);
-      if (bufferElem != this->inputBuffer.cend()){
-        return bufferElem->second;
-      }
-      return Value(false);
+      return this->inputBuffer[key];
     }
 
     inline auto cbegin(){
@@ -111,13 +113,13 @@ namespace templatedb
         }
       }
 
-      inline void loadDimension(int size){
+      void loadDimension(int size){
         if (size > 0x80){ std::cerr << "dimension is larger than 127" << std::endl; }
         if (size > LARGEST_KEY_VALUE_SIZE){
           LARGEST_KEY_VALUE_SIZE = size;
-          TUPLE_SIZE = LARGEST_KEY_VALUE_SIZE * sizeof(int) + 1;
+          BUFFER_SIZE = LARGEST_KEY_VALUE_SIZE * sizeof(int) + 1;
           free(this->buffer);
-          buffer = (char*)malloc(TUPLE_SIZE);
+          buffer = (char*)malloc(BUFFER_SIZE);
         }
         buffer[0] = 0;
         buffer[0] |= VALID_MASK;
@@ -125,13 +127,13 @@ namespace templatedb
       }
 
     public:
-      int TUPLE_SIZE;
+      int BUFFER_SIZE;
 
       char* buffer;
 
       Tuple() {
-        TUPLE_SIZE = LARGEST_KEY_VALUE_SIZE * sizeof(int) + 1;
-        buffer = (char*)malloc(TUPLE_SIZE);
+        BUFFER_SIZE = LARGEST_KEY_VALUE_SIZE * sizeof(int) + 1;
+        buffer = (char*)malloc(BUFFER_SIZE);
       }
       ~Tuple(){free(buffer);}
       
@@ -150,6 +152,7 @@ namespace templatedb
       }
 
       void dumpValue(Value* result){
+        result->valid = true;
         result->visible = this->isValid();
         int* values = reinterpret_cast<int*>(&buffer[TUPLE_VALUE_OFFSET]);
 
@@ -160,6 +163,7 @@ namespace templatedb
       }
 
       void loadFromArray(bool isValid, int* array, int size){
+        memset(this->buffer, 0, BUFFER_SIZE);
         this->loadDimension(size);
 
         this->setValidBit(isValid);
@@ -171,11 +175,32 @@ namespace templatedb
       }
 
       inline void writeToFile(std::fstream* file){
-        file->write(buffer, TUPLE_SIZE);
+        int size = this->getDimension()*sizeof(int) + TUPLE_KEY_SIZE + TUPLE_VALID_BYTE_SIZE;
+        file->write(buffer, size);
       }
 
       inline void writeToFile(std::ofstream* file){
-        file->write(buffer, TUPLE_SIZE);
+        int size = this->getDimension()*sizeof(int) + TUPLE_KEY_SIZE + TUPLE_VALID_BYTE_SIZE;
+        file->write(buffer, size);
+      }
+
+      int readFromFile(std::fstream& file){
+        memset(this->buffer, 0, BUFFER_SIZE);
+        int gcount = 0;
+        file.read(buffer, TUPLE_VALID_BYTE_SIZE);
+        gcount += file.gcount();
+        int dimension = this->getDimension();
+
+        this->loadDimension(dimension + 1);
+        file.read(buffer+TUPLE_KEY_OFFSET, TUPLE_KEY_SIZE);
+        gcount += file.gcount();
+        char* bufferPtr = buffer+TUPLE_VALID_BYTE_SIZE+TUPLE_KEY_SIZE;
+        for (int i = 0; i < dimension; ++i){
+          file.read(bufferPtr, sizeof(int));
+          gcount += file.gcount();
+          bufferPtr += sizeof(int);
+        }
+        return gcount;
       }
   }; /* Tuple */
 

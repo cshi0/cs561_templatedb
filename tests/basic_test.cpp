@@ -11,6 +11,7 @@ protected:
     templatedb::DB db0;
     templatedb::DB db1;
     templatedb::DB db2;
+    templatedb::DB db3;
 
     templatedb::Value v1 = templatedb::Value({1, 2});
     templatedb::Value v2 = templatedb::Value({6, 10});
@@ -21,9 +22,11 @@ protected:
     void SetUp() override 
     {
         std::string fname = "test_db"; 
-        db0.open(fname, templatedb::LEVELING);
-        db1.open(fname, templatedb::LEVELING);
-        db2.open(fname, templatedb::LEVELING);
+        std::string name = "empty_test";
+        db0.open(fname, templatedb::TIERING);
+        db1.open(fname, templatedb::TIERING);
+        db2.open(fname, templatedb::TIERING);
+        db3.open(name, templatedb::TIERING);
         db1.put(2, v1);
         db1.put(5, v2);
         db2.put(1024, v3);
@@ -76,16 +79,21 @@ TEST_F(DBTest, DeleteFunctionality)
 TEST_F(DBTest, ScanFunctionality)
 {
     std::vector<templatedb::Value> vals;
-    vals = db2.scan();
-    ASSERT_EQ(vals.size(), 1);
-    EXPECT_EQ(vals[0], DBTest::v3);
+    // vals = db2.scan();
+    // ASSERT_EQ(vals.size(), 1);
+    // EXPECT_EQ(vals[0], DBTest::v3);
 
-    vals = db1.scan(1, 3);
+
+    std::string data = "/mnt/d/files/BU/CS 561/projects/LSM/cs561_templatedb/data/test_500_4.data";
+    db0.load_data_file(data);
+    db0.put(1, v1);
+    vals = db0.scan(1, 3);
     ASSERT_EQ(vals.size(), 1);
     EXPECT_EQ(vals[0], DBTest::v1);
 
-    vals = db1.scan();
-    ASSERT_EQ(vals.size(), 2);
+    db3.load_data_file(data);
+    vals = db3.scan();
+    ASSERT_EQ(vals.size(), 500);
 }
 
 
