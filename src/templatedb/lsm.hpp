@@ -52,25 +52,12 @@ namespace templatedb{
 
   class LSM{
     private:
-      std::string DIR; // directory where the LSM tree resides
-      lsm_mode MODE; // leveling or tiering
-
-      std::unordered_map<FileIdentifier, LSMFile*, pair_hash> files;
-
-      InputBuffer inputBuffer; // the input buffer is a red-black tree
-
-      int levels = 0; // level 0 is the inputBuffer
-      std::unordered_map<FileIdentifier, FencePointers*, pair_hash> fencePointers;
-      std::unordered_map<FileIdentifier, BF::BloomFilter*, pair_hash> bloomfilters;
-      std::vector<int> numFileAtLevel = {0};
-
       inline int _LevelFileLimit(int level) {return std::pow(LSM_MERGE_RATIO, level);}
       inline std::string _getFileName(int level, int k) {return DIR + "/" + LSM_FILE_NAME_PREFIX + std::to_string(level) + "_" + std::to_string(k);}
 
       LSMFile* _getFile(int level, int k); // k start from 1
 
       void _levelingMerge(int level, std::vector<LSMFile*> files);
-      std::string writeBufferFile();
 
       Value _TieringGet(int key);
       void _TieringPut(int key, Value val);
@@ -85,6 +72,17 @@ namespace templatedb{
       void _LevelingPushLevel(int level);
     
     public:
+      std::string DIR; // directory where the LSM tree resides
+      lsm_mode MODE; // leveling or tiering
+
+      std::unordered_map<FileIdentifier, LSMFile*, pair_hash> files;
+
+      InputBuffer inputBuffer; // the input buffer is a red-black tree
+
+      int levels = 0; // level 0 is the inputBuffer
+      std::unordered_map<FileIdentifier, FencePointers*, pair_hash> fencePointers;
+      std::unordered_map<FileIdentifier, BF::BloomFilter*, pair_hash> bloomfilters;
+      std::vector<int> numFileAtLevel = {0};
       LSM(std::string _dir, lsm_mode _mode) : DIR(_dir), MODE(_mode){}
       ~LSM(){close();}
 
@@ -106,6 +104,8 @@ namespace templatedb{
       void put(int key, Value val);
       std::vector<Value> scan();
       std::vector<Value> scan(int min_key, int max_key);
+
+      std::string writeBufferFile();
   }; /* LSM */
 
 } /* templatedb */

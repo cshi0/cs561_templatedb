@@ -34,9 +34,8 @@ namespace templatedb
   static int LARGEST_KEY_VALUE_SIZE = 0;
 
   class FencePointers{
-    std::vector<std::pair<streampos, int>> minValues; // (file position, key)
-    
     public:
+      std::vector<std::pair<streampos, int>> minValues; // (file position, key)
       std::pair<streampos, streampos> getOffset(int key){
         if (minValues[0].second > key){
           return std::pair<streampos, streampos>(streampos(-1), streampos(-1));

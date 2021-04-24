@@ -12,6 +12,7 @@ public:
 	BloomFilter( int numElement_, int bitsPerElement_ );
 	int numElement;
 	int bitsPerElement;
+	vector< bool > bf_vec;
 
 	void program(string key);
 	bool query(string key);
@@ -21,8 +22,7 @@ public:
 private:
 	int numIndex;
 	int size;
-	vector< bool > bf_vec;
-
+	
 	void makeBloomFilter();
 	void getIndex( string key, vector<int>* index );
 };

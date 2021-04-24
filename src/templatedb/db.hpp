@@ -32,6 +32,9 @@ public:
     void del(int key);
     void del(int min_key, int max_key);
 
+    void persist();
+    void init();
+
     db_status open(std::string & dir, lsm_mode mode);
     bool close();
 
@@ -44,6 +47,15 @@ private:
     std::string dir;
     lsm_mode mode;
     
+    void _writeBuffer();
+    void _readBuffer();
+    void _writeInfo();
+    void _readInfo();
+    void _writeFencePointers();
+    void _readFencePointers();
+    void _writeBloomFilters();
+    void _readBloomFilters();
+
 };
 
 }   // namespace templatedb
