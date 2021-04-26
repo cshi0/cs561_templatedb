@@ -250,12 +250,15 @@ void DB::_writeFencePointers(){
                 ++FPIter;
                 continue;
             }
-            //FileIdentifier
-            fencePointers.write((char*)&(FPIter->first.first), sizeof(int));
-            fencePointers.write((char*)&(FPIter->first.second), sizeof(int));
 
             FencePointers* fp = FPIter->second;
-            fp->serialize(fencePointers);
+            if (fp != nullptr){
+                //FileIdentifier
+                fencePointers.write((char*)&(FPIter->first.first), sizeof(int));
+                fencePointers.write((char*)&(FPIter->first.second), sizeof(int));
+                fp->serialize(fencePointers);
+            }
+
             ++FPIter;
         }
     }
@@ -291,12 +294,14 @@ void DB::_writeBloomFilters(){
                 ++BFIter;
                 continue;
             }
-            //FileIdentifier
-            bloomFilters.write((char*)&(BFIter->first.first), sizeof(int));
-            bloomFilters.write((char*)&(BFIter->first.second), sizeof(int));
-
             BF::BloomFilter* bf = BFIter->second;
-            bf->serialize(bloomFilters);
+            if (bf != nullptr){
+                //FileIdentifier
+                bloomFilters.write((char*)&(BFIter->first.first), sizeof(int));
+                bloomFilters.write((char*)&(BFIter->first.second), sizeof(int));
+                bf->serialize(bloomFilters);
+            }
+            
             ++BFIter;
         }
     }
@@ -314,7 +319,7 @@ void DB::_readBloomFilters(){
             bloomFilters.read((char*)&k, sizeof(int));
             
             BF::BloomFilter* newBF = new BF::BloomFilter();
-            if (!newBF->deserialize(bloomFilters)){free(newBF);continue;}
+            if (!newBF->deserialize(bloomFilters)){delete newBF;continue;}
 
             this->lsm->bloomfilters[{level,k}] = (BF::BloomFilter*)newBF;
         }
