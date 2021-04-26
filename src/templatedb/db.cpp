@@ -255,15 +255,7 @@ void DB::_writeFencePointers(){
             fencePointers.write((char*)&(FPIter->first.second), sizeof(int));
 
             FencePointers* fp = FPIter->second;
-            int size = fp->minValues.size();
-            fencePointers.write((char*)&size, sizeof(int));
-            auto vectorIter = fp->minValues.cbegin();
-            while (vectorIter != fp->minValues.cend()){
-                std::streamoff off = (std::streamoff)(vectorIter->first);
-                fencePointers.write((char*)&(off), sizeof(long));
-                fencePointers.write((char*)&(vectorIter->second), sizeof(int));
-                ++vectorIter;
-            }
+            fp->serialize(fencePointers);
             ++FPIter;
         }
     }
@@ -275,28 +267,22 @@ void DB::_readFencePointers(){
     if (fencePointers.good()){
         fencePointers.seekg(0);
         while (fencePointers.good()){
-            int level, k, numPairs;
+            int level, k;
+            size_t objectSize;
             fencePointers.read((char*)&level, sizeof(int));
             fencePointers.read((char*)&k, sizeof(int));
-            fencePointers.read((char*)&numPairs, sizeof(int));
-
+            
             FencePointers* newFP = new FencePointers();
-            for (int i = 0; i < numPairs; ++i){
-                std::streamoff off;
-                int key;
-                fencePointers.read((char*)&off, sizeof(long));
-                fencePointers.read((char*)&key, sizeof(int));
-                newFP->add(std::streampos(off), key);
-            }
+            if (!newFP->deserialize(fencePointers)) {free(newFP);continue;}
 
-            this->lsm->fencePointers[{level, k}] = newFP;
+            this->lsm->fencePointers[{level, k}] = (FencePointers*)newFP;
         }
     }
     fencePointers.close();
 }
 
 void DB::_writeBloomFilters(){
-    std::ofstream bloomFilters(this->dir + "/bloomFilters");
+    std::ofstream bloomFilters(this->dir + "/bloomFilters", std::ios::binary);
     if (bloomFilters.good()){
         bloomFilters.seekp(0);
         auto BFIter = this->lsm->bloomfilters.cbegin();
@@ -310,33 +296,7 @@ void DB::_writeBloomFilters(){
             bloomFilters.write((char*)&(BFIter->first.second), sizeof(int));
 
             BF::BloomFilter* bf = BFIter->second;
-            bloomFilters.write((char*)&(bf->bitsPerElement), sizeof(int));
-            bloomFilters.write((char*)&(bf->numElement), sizeof(int));
-            
-            int vectorSize = bf->bf_vec.size();
-            bloomFilters.write((char*)&(vectorSize), sizeof(int));
-
-            std::vector<char> buffer(bf->bf_vec.size()/8);
-            int count = 0;
-            char byte = 0;
-            for (int i = 0; i < bf->bf_vec.size(); ++i){
-                bool bit = bf->bf_vec[i];
-                byte |= (bit ? 1 : 0);
-                byte <<= 1; 
-                ++count;
-                if (count == 8){
-                    buffer.push_back(byte);
-                    count = 0;
-                    byte = 0;
-                }
-            }
-            buffer.push_back(byte);
-            int bufferSize = buffer.size();
-            bloomFilters.write((char*)&bufferSize, sizeof(int));
-            for (char c : buffer){
-                bloomFilters.write(&c, sizeof(char));
-            }
-
+            bf->serialize(bloomFilters);
             ++BFIter;
         }
     }
@@ -348,30 +308,15 @@ void DB::_readBloomFilters(){
     if(bloomFilters.good()){
         bloomFilters.seekg(0);
         while (bloomFilters.good()){
-            int level, k, bitsPerElement, numElement, vectorSize, bufferSize;
+            int level, k;
+            size_t objectSize;
             bloomFilters.read((char*)&level, sizeof(int));
             bloomFilters.read((char*)&k, sizeof(int));
-            bloomFilters.read((char*)&bitsPerElement, sizeof(int));
-            bloomFilters.read((char*)&numElement, sizeof(int));
-            bloomFilters.read((char*)&vectorSize, sizeof(int));
-            bloomFilters.read((char*)&bufferSize, sizeof(int));
+            
+            BF::BloomFilter* newBF = new BF::BloomFilter();
+            if (!newBF->deserialize(bloomFilters)){free(newBF);continue;}
 
-            BF::BloomFilter* newBF = new BF::BloomFilter(numElement, bitsPerElement);
-            this->lsm->bloomfilters[{level, k}] = newBF;
-            vector<char> buffer(vectorSize/8);
-            for (int i = 0; i < bufferSize; ++i){
-                char byte;
-                bloomFilters.read(&byte, sizeof(char));
-                buffer.push_back(byte);
-            }
-
-            for (int i = 0; i < vectorSize; ++i){
-                if (((buffer[i/8] >> (i%8)) & 1) == 1){
-                    newBF->bf_vec[i] = true;
-                } else{
-                    newBF->bf_vec[i] = false;
-                }
-            }
+            this->lsm->bloomfilters[{level,k}] = (BF::BloomFilter*)newBF;
         }
     }
     bloomFilters.close();

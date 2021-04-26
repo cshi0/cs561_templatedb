@@ -51,6 +51,34 @@ namespace templatedb
       inline void add(streampos index, int key){
         this->minValues.push_back(std::pair<streampos, int>(index, key));
       }
+
+      void serialize(std::ofstream& file){
+        size_t size = minValues.size();
+        file.write((char*)&size, sizeof(size_t));
+        for (int i = 0; i < size; ++i){
+          std::streamoff off = minValues[i].first;
+          int key = minValues[i].second;
+          file.write((char*)&off, sizeof(std::streamoff));
+          file.write((char*)&key, sizeof(int));
+        }
+      }
+
+      bool deserialize(std::fstream& file){
+        size_t size;
+        file.read((char*)&size, sizeof(size_t));
+        if (file.gcount() == 0){
+          return false;
+        }
+
+        for (int i = 0; i < size; ++i){
+          std::streamoff off;
+          int key;
+          file.read((char*)&off, sizeof(std::streamoff));
+          file.read((char*)&key, sizeof(int));
+          minValues.push_back({std::streampos(off), key});
+        }
+        return true;
+      }
   }; /* FencePointers */
 
   class Value{
@@ -88,7 +116,9 @@ namespace templatedb
     }
 
     inline Value find(int key){
-      return this->inputBuffer[key];
+      Value v = this->inputBuffer[key];
+      if (v.valid == false) {this->inputBuffer.erase(key);}
+      return v;
     }
 
     inline auto cbegin(){
