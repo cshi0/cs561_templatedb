@@ -76,25 +76,25 @@ TEST_F(DBTest, DeleteFunctionality)
 }
 
 
-TEST_F(DBTest, ScanFunctionality)
-{
-    std::vector<templatedb::Value> vals;
-    // vals = db2.scan();
-    // ASSERT_EQ(vals.size(), 1);
-    // EXPECT_EQ(vals[0], DBTest::v3);
+// TEST_F(DBTest, ScanFunctionality)
+// {
+//     std::vector<templatedb::Value> vals;
+//     // vals = db2.scan();
+//     // ASSERT_EQ(vals.size(), 1);
+//     // EXPECT_EQ(vals[0], DBTest::v3);
 
 
-    std::string data = "/mnt/d/files/BU/CS 561/projects/LSM/cs561_templatedb/data/test_500_4.data";
-    db0.load_data_file(data);
-    db0.put(1, v1);
-    vals = db0.scan(1, 3);
-    ASSERT_EQ(vals.size(), 1);
-    EXPECT_EQ(vals[0], DBTest::v1);
+//     std::string data = "/mnt/d/files/BU/CS 561/projects/LSM/cs561_templatedb/data/test_500_4.data";
+//     db0.load_data_file(data);
+//     db0.put(1, v1);
+//     vals = db0.scan(1, 3);
+//     ASSERT_EQ(vals.size(), 1);
+//     EXPECT_EQ(vals[0], DBTest::v1);
 
-    db3.load_data_file(data);
-    vals = db3.scan();
-    ASSERT_EQ(vals.size(), 500);
-}
+//     db3.load_data_file(data);
+//     vals = db3.scan();
+//     ASSERT_EQ(vals.size(), 500);
+// }
 
 
 int main(int argc, char **argv)

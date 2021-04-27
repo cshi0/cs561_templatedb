@@ -11,8 +11,8 @@
 #include "BloomFilter/BloomFilter.h"
 
 #ifndef PAGE_SIZE
-#define PAGE_SIZE 128
-#define FENCEPOINTER_GRANULARITY 5
+#define PAGE_SIZE 4194304
+#define FENCEPOINTER_GRANULARITY 20
 #endif
 
 #define LSM_PAGE_HEADER_SIZE sizeof(int)

@@ -155,6 +155,10 @@ Value LSM::_TieringGet(int key){
         std::pair<streampos, streampos> fence = fencePointer->getOffset(key); // get the fence region
         streampos trav = fence.first;
 
+        if ((std::streamoff)trav == -1){
+          continue;
+        }
+
         // find file end
         file->file.seekg(0, std::ios::end);
         streampos end = file->file.tellg();
@@ -165,6 +169,7 @@ Value LSM::_TieringGet(int key){
         Tuple t;
         do {
           file->loadTuple(&t);
+          trav = file->file.tellg();
         } while (t.getKey() != key && trav <= last);
 
         // tuple found
@@ -369,6 +374,10 @@ Value LSM::_LevelingGet(int key){
       std::pair<streampos, streampos> fence = fencePointer->getOffset(key); // get the fence region
       streampos trav = fence.first;
 
+      if ((std::streamoff)trav == -1){
+          continue;
+        }
+
       // find file end
       file->file.seekg(0, std::ios::end);
       streampos end = file->file.tellg();
@@ -379,6 +388,7 @@ Value LSM::_LevelingGet(int key){
       Tuple t;
       do {
         file->loadTuple(&t);
+        trav = file->file.tellg();
       } while (t.getKey() != key && trav <= last);
 
       // tuple found
