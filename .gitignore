@@ -37,3 +37,8 @@ debug
 
 # Workspace settings
 .vscode
+
+# dbs
+test_leveling_db2
+test_tiering_db
+test_tiering_db2
